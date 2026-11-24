@@ -103,6 +103,17 @@ jobs:
           done
           exit 1
 
+      - name: Celery beat evaluates alerts (demo backup-node is offline)
+        run: |
+          docker compose logs bot | grep -q "TELEGRAM_BOT_TOKEN is not set"
+          for i in $(seq 1 30); do
+            COUNT=$(docker compose exec -T web python manage.py shell -c               "from alerts.models import Alert; print(Alert.objects.open().filter(server__name='backup-node', kind='offline').count())" | tail -n1)
+            echo "open offline alerts for backup-node: $COUNT"
+            if [ "$COUNT" = "1" ]; then exit 0; fi
+            sleep 3
+          done
+          exit 1
+
       - name: Diagnostics
         if: failure()
         run: |
