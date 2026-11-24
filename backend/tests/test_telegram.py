@@ -134,6 +134,15 @@ def fake_message(chat_id=CHAT_ID, username="alice_tg"):
 
 @pytest.mark.django_db(transaction=True)  # handlers hit the DB from sync_to_async threads
 class TestHandlers:
+    @pytest.fixture(autouse=True)
+    def _close_thread_connections(self):
+        yield
+        # sync_to_async runs the ORM in a worker thread with its own DB connection.
+        from asgiref.sync import sync_to_async
+        from django.db import connections
+
+        asyncio.run(sync_to_async(connections.close_all)())
+
     def test_start_with_code_links_chat(self, user):
         code = TelegramLinkCode.issue(user)
         message = fake_message()
