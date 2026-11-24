@@ -83,6 +83,8 @@ jobs:
           docker compose exec -T web python manage.py migrate --check
           docker compose exec -T web python manage.py shell -c \
             "from servers.models import Server; print('demo servers:', Server.objects.filter(is_demo=True).count())"
+          docker compose exec -T web python manage.py shell -c \
+            "from ai.models import Runbook; n = Runbook.objects.count(); print('runbooks:', n); assert n == 6"
 
       - name: Create a server and install the agent like a user would
         run: |
