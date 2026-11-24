@@ -26,10 +26,12 @@
     return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
   };
 
-  const timeFormats = {
-    "1h": new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }),
-    "24h": new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }),
-    "7d": new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+  const hhmm = new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  const ddmm = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" });
+  // A label may be an array: Chart.js renders it on two lines, which keeps narrow charts readable.
+  const formatLabel = (range, ms) => {
+    const date = new Date(ms);
+    return range === "7d" ? [ddmm.format(date), hhmm.format(date)] : hhmm.format(date);
   };
 
   const dataset = (label, colorVar, field, { fill = false } = {}) => {
@@ -65,7 +67,7 @@
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { maxTicksLimit: 7, maxRotation: 0, autoSkip: true } },
+      x: { grid: { display: false }, ticks: { maxTicksLimit: 7, maxRotation: 0, autoSkip: true, autoSkipPadding: 18 } },
       y: { beginAtZero: true, max, grid: { color: cssVar("--grid") }, ticks: { maxTicksLimit: 5, callback: tick } },
     },
   });
@@ -116,8 +118,7 @@
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
-      const fmt = timeFormats[payload.range] || timeFormats["1h"];
-      const labels = payload.timestamps.map((ms) => fmt.format(new Date(ms)));
+      const labels = payload.timestamps.map((ms) => formatLabel(payload.range, ms));
       for (const chart of charts) {
         chart.data.labels = labels;
         for (const ds of chart.data.datasets) ds.data = payload.series[ds.field];
