@@ -1,0 +1,43 @@
+# NightWatch agent configuration.
+# Installed to /etc/nightwatch/agent.yaml by install.sh (mode 640: the token is a secret).
+# NIGHTWATCH_API_URL and NIGHTWATCH_TOKEN environment variables override the values below.
+
+# Base URL of the NightWatch backend (no /api suffix).
+api_url: "http://nightwatch.example.com"
+# Server token shown once when the server was added in the web UI.
+token: "nw_CHANGE_ME"
+
+# Seconds between reports.
+interval: 15
+# HTTP timeout per request and retries per report (exponential backoff with jitter).
+timeout: 10
+max_retries: 3
+verify_tls: true
+# Reports kept in memory while the backend is unreachable (120 × 15s = 30 minutes).
+buffer_size: 120
+
+# Mount point whose usage is reported as "disk".
+disk_path: "/"
+
+# systemd units whose state (active/failed/...) is reported.
+services:
+  - ssh
+  - nginx
+  - docker
+
+# journald: only new entries since the last run (cursor is persisted in state_file).
+journal:
+  enabled: true
+  # Empty list = the whole system journal.
+  units: []
+  # Lowest severity to collect: emerg, alert, crit, err, warning, notice, info, debug.
+  priority: warning
+
+# Plain-text log files followed like `tail -F` (logrotate-safe).
+logs:
+  files:
+    - /var/log/nginx/error.log
+  max_lines_per_cycle: 200
+
+state_file: /var/lib/nightwatch-agent/state.json
+log_level: INFO

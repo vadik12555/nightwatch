@@ -39,3 +39,7 @@ pythonpath = ["backend", "agent"]
 testpaths = ["backend/tests", "agent/tests"]
 addopts = "-ra --strict-markers --import-mode=importlib"
 filterwarnings = ["error::RuntimeWarning"]
+
+[tool.ruff.per-file-target-version]
+# The agent runs on the target servers' stock python3, so it stays 3.9-compatible.
+"agent/nightwatch_agent.py" = "py39"
