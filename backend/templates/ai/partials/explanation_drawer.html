@@ -1,0 +1,11 @@
+<aside class="drawer" role="dialog" aria-label="AI-разбор ошибки">
+  <div class="drawer__head">
+    <div>
+      <div class="drawer__eyebrow">✨ AI-разбор ошибки</div>
+      <div class="drawer__source mono">{{ entry.server.name }} · {{ entry.source }}</div>
+    </div>
+    <button type="button" class="btn btn--ghost btn--sm" data-close-drawer aria-label="Закрыть">✕</button>
+  </div>
+  <pre class="drawer__log">{{ entry.message }}</pre>
+  {% include "ai/partials/explanation_body.html" %}
+</aside>

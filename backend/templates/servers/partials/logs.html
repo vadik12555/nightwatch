@@ -5,7 +5,8 @@
         <time class="log-row__time mono" datetime="{{ log.timestamp|date:'c' }}">{{ log.timestamp|date:"d.m H:i:s" }}</time>
         <span><span class="badge badge--{{ log.level }}">{{ log.get_level_display }}</span></span>
         <span class="log-row__source mono" title="{{ log.source }}">{{ log.source }}</span>
-        <span class="log-row__msg mono">{{ log.message }}</span>
+        <span class="log-row__msg mono">{{ log.message }}{% if ai_enabled %}{% if log.level == "error" or log.level == "critical" %}
+          <button type="button" class="explain-btn" hx-post="{% url 'ai:explain' log.pk %}" hx-target="#ai-panel" title="Объяснить с помощью AI">✨ Объяснить</button>{% endif %}{% endif %}</span>
       </div>
     {% endfor %}
   </div>

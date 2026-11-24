@@ -1,0 +1,33 @@
+{% load ai_tags %}
+{% if explanation.status == "pending" or explanation.status == "running" %}
+  <div class="drawer__body" hx-get="{% url 'ai:explanation' explanation.pk %}" hx-trigger="every 3s" hx-swap="outerHTML">
+    <div class="waiting"><span class="spinner"></span><span>Модель разбирает ошибку… Локальная LLM может думать до минуты.</span></div>
+  </div>
+{% elif explanation.status == "failed" %}
+  <div class="drawer__body">
+    <div class="alert alert--error">Не удалось получить объяснение: {{ explanation.error }}</div>
+    {% if explanation.log_entry_id %}
+      <button class="btn btn--sm" style="margin-top: 12px" hx-post="{% url 'ai:explain' explanation.log_entry_id %}" hx-target="#ai-panel">Повторить</button>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="drawer__body">
+    <div class="md">{{ explanation.explanation|markdown }}</div>
+    {% with commands=explanation.explanation|shell_commands %}
+      {% if commands %}
+        <h4 class="drawer__subtitle">Команды для копирования</h4>
+        {% for command in commands %}
+          <div class="codebox" style="margin-bottom: 8px">
+            <pre id="cmd-{{ explanation.pk }}-{{ forloop.counter }}">{{ command }}</pre>
+            <button type="button" class="btn btn--sm" data-copy="#cmd-{{ explanation.pk }}-{{ forloop.counter }}">Копировать</button>
+          </div>
+        {% endfor %}
+        <p class="muted drawer__note">Команды предложены моделью — проверьте их перед запуском. NightWatch ничего не выполняет сам.</p>
+      {% endif %}
+    {% endwith %}
+    <div class="drawer__meta">
+      {% if from_cache or explanation.hits %}♻ из кэша · {% endif %}модель {{ explanation.model|default:"—" }}
+      · похожие ошибки объяснялись {{ explanation.hits|add:1 }} раз
+    </div>
+  </div>
+{% endif %}
