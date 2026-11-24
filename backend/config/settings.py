@@ -10,6 +10,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
+from celery.schedules import crontab
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
@@ -63,6 +64,7 @@ INSTALLED_APPS = [
     "metrics",
     "alerts",
     "notifications",
+    "ai",
 ]
 
 MIDDLEWARE = [
@@ -92,6 +94,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "alerts.context_processors.open_alerts",
+                "ai.context_processors.ai_status",
             ],
         },
     },
@@ -196,6 +199,15 @@ CELERY_BEAT_SCHEDULE = {
         "task": "metrics.tasks.prune_old_data",
         "schedule": timedelta(hours=1),
     },
+    "weekly-health-report": {
+        "task": "ai.tasks.weekly_health_report",
+        # Mondays at 09:00 in TIME_ZONE.
+        "schedule": crontab(
+            minute=0,
+            hour=env_int("NIGHTWATCH_WEEKLY_REPORT_HOUR", 9),
+            day_of_week="mon",
+        ),
+    },
     "simulate-demo-servers": {
         "task": "metrics.tasks.simulate_demo_servers",
         "schedule": timedelta(seconds=15),
@@ -224,6 +236,20 @@ NIGHTWATCH_DEPLOY_DIR = Path(os.environ.get("NIGHTWATCH_DEPLOY_DIR", REPO_DIR / 
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 # Bot username without @, used for the t.me deep link on the "link chat" page.
 TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "").lstrip("@")
+
+# --- AI (stage 3) --------------------------------------------------------------------------
+
+# Any OpenAI-compatible API: OpenAI, OpenRouter, vLLM, or a local Ollama
+# (LLM_BASE_URL=http://localhost:11434/v1, LLM_API_KEY=ollama). Empty key = AI disabled.
+LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1")
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+# Must return 1024-dim vectors (bge-m3, or text-embedding-3-* with dimensions=1024).
+LLM_EMBEDDING_MODEL = os.environ.get("LLM_EMBEDDING_MODEL", "text-embedding-3-small")
+LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 180)
+# Runbook chunks farther than this cosine distance from the question are ignored.
+RAG_MAX_DISTANCE = float(os.environ.get("RAG_MAX_DISTANCE", "0.75"))
+RAG_TOP_K = env_int("RAG_TOP_K", 4)
 
 # --- Logging ------------------------------------------------------------------------
 

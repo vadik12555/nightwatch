@@ -30,7 +30,7 @@ ignore = [
 "agent/nightwatch_agent.py" = ["S603", "S607"]  # calls systemctl/journalctl with fixed args
 
 [tool.ruff.lint.isort]
-known-first-party = ["config", "accounts", "servers", "metrics", "alerts", "notifications", "nightwatch_agent"]
+known-first-party = ["config", "accounts", "servers", "metrics", "alerts", "notifications", "ai", "nightwatch_agent"]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings_test"

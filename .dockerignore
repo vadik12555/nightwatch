@@ -13,3 +13,4 @@ backend/db.sqlite3*
 agent/tests
 docs
 *.md
+!backend/ai/sample_runbooks/*.md
