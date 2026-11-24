@@ -2,7 +2,8 @@
 #
 #   nginx  ──▶ web (Django + Gunicorn) ──▶ db (PostgreSQL 16 + pgvector)
 #                                     └──▶ redis (cache, rate-limit counters, Celery broker)
-#   celery (worker + beat) ──▶ redis, db
+#   celery (worker + beat: alerts every 30 s) ──▶ redis, db, Telegram API
+#   bot (aiogram, long polling) ──▶ db, Telegram API
 name: nightwatch
 
 x-backend-env: &backend-env
@@ -79,6 +80,14 @@ services:
       timeout: 15s
       start_period: 30s
       retries: 3
+
+  bot:
+    <<: *backend
+    # Telegram bot: /start <code> linking, /status, /servers. Idles if TELEGRAM_BOT_TOKEN is empty.
+    command: ["python", "manage.py", "run_bot"]
+    depends_on:
+      web:
+        condition: service_healthy
 
   nginx:
     image: nginx:1.27-alpine
