@@ -85,6 +85,7 @@ class TestDashboard:
             "offline": 0,
             "pending": 1,
             "failed_services": 1,
+            "open_alerts": 0,
         }
         assert "web-01" in html
         assert "93%" in html  # latest snapshot, not the older one

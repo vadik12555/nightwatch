@@ -3,7 +3,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
-from django.db.models import Count, OuterRef, Q, Subquery
+from django.db.models import Q
 from django.http import FileResponse, Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
@@ -13,6 +13,7 @@ from metrics.models import LogEntry, MetricSnapshot
 
 from .forms import ServerForm
 from .models import Server
+from .selectors import fleet_summary, servers_with_latest_metrics
 
 SESSION_TOKEN_KEY = "nightwatch_new_token"  # noqa: S105 - a session key name
 LOG_LIMIT = 100
@@ -34,44 +35,13 @@ def install_command(request: HttpRequest, token: str) -> str:
     return f"curl -fsSL {base}/agent/install.sh | sudo bash -s -- --url {base} --token {token}"
 
 
-def servers_with_latest_metrics() -> list[Server]:
-    """All servers with their latest snapshot and failed-services count in 2 queries (no N+1)."""
-    latest_id = (
-        MetricSnapshot.objects.filter(server=OuterRef("pk")).order_by("-timestamp").values("pk")[:1]
-    )
-    servers = list(
-        Server.objects.annotate(
-            latest_snapshot_id=Subquery(latest_id),
-            failed_services=Count("services", filter=Q(services__status="failed")),
-        )
-        # Explicit: Meta.ordering is ignored in GROUP BY (aggregate) queries.
-        .order_by("name")
-    )
-    snapshots = MetricSnapshot.objects.in_bulk(
-        [s.latest_snapshot_id for s in servers if s.latest_snapshot_id]
-    )
-    for server in servers:
-        server.latest = snapshots.get(server.latest_snapshot_id)
-    return servers
-
-
 # --- Dashboard ----------------------------------------------------------------------
 
 
 @require_GET
 def dashboard(request: HttpRequest) -> HttpResponse:
     servers = servers_with_latest_metrics()
-    statuses = [s.status for s in servers]
-    context = {
-        "servers": servers,
-        "summary": {
-            "total": len(servers),
-            "online": statuses.count(Server.Status.ONLINE),
-            "offline": statuses.count(Server.Status.OFFLINE),
-            "pending": statuses.count(Server.Status.PENDING),
-            "failed_services": sum(s.failed_services for s in servers),
-        },
-    }
+    context = {"servers": servers, "summary": fleet_summary(servers)}
     template = (
         "servers/partials/dashboard_body.html" if is_htmx(request) else "servers/dashboard.html"
     )
