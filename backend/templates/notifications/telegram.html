@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Telegram{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Уведомления в Telegram</h1>
+    <p class="muted">Алерты и восстановления приходят в привязанные чаты; там же работают команды /status и /servers</p>
+  </div>
+</div>
+
+{% if not configured %}
+  <div class="alert alert--warning" style="margin-bottom: 18px">
+    Бот не настроен: задайте <code>TELEGRAM_BOT_TOKEN</code> (токен от @BotFather) и <code>TELEGRAM_BOT_USERNAME</code>
+    в <code>.env</code> и перезапустите сервисы <code>bot</code> и <code>celery</code>. Привязать чат можно и сейчас — уведомления пойдут, когда токен появится.
+  </div>
+{% endif %}
+
+<div class="form-layout">
+  <section class="card">
+    <div class="steps">
+      <div class="step">
+        <h2>Получите код привязки</h2>
+        <p>Одноразовый, действует 10 минут. Код доказывает боту, что чат принадлежит вашему аккаунту.</p>
+        {% if code %}
+          <div class="codebox">
+            <pre id="link-command">/start {{ code.code }}</pre>
+            <button type="button" class="btn" data-copy="#link-command">Копировать</button>
+          </div>
+          <p class="muted" style="margin-top: 8px">Действует до {{ code.expires_at|date:"H:i" }}.</p>
+        {% else %}
+          <form method="post" action="{% url 'notifications:issue_code' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn--primary">Получить код</button>
+          </form>
+        {% endif %}
+      </div>
+      <div class="step">
+        <h2>Отправьте его боту</h2>
+        {% if deep_link %}
+          <p>Откройте бота по ссылке — команда с кодом подставится сама, останется нажать «Start».</p>
+          <a class="btn btn--primary" href="{{ deep_link }}" target="_blank" rel="noopener">Открыть @{{ bot_username }}</a>
+        {% elif bot_username %}
+          <p>Найдите в Telegram <b>@{{ bot_username }}</b> и отправьте команду с кодом.</p>
+        {% else %}
+          <p>Найдите своего бота в Telegram и отправьте ему команду с кодом.</p>
+        {% endif %}
+      </div>
+      <div class="step">
+        <h2>Готово</h2>
+        <p>Чат появится в списке справа — он обновляется сам.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head"><h2>Привязанные чаты</h2></div>
+    <div hx-get="{% url 'notifications:telegram' %}" hx-trigger="every 5s">
+      {% include "notifications/partials/chats.html" %}
+    </div>
+  </section>
+</div>
+{% endblock %}

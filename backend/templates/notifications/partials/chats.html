@@ -1,0 +1,21 @@
+{% if chats %}
+  <ul class="service-list">
+    {% for chat in chats %}
+      <li class="service{% if chat.notify %} service--active{% endif %}">
+        <span class="service__dot"></span>
+        <span class="service__name">{% if chat.username %}@{{ chat.username }}{% else %}{{ chat.title|default:chat.chat_id }}{% endif %}</span>
+        <form method="post" action="{% url 'notifications:toggle_chat' chat.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="switch{% if chat.notify %} is-on{% endif %}" title="Уведомления об алертах">
+            <span class="switch__knob"></span>{{ chat.notify|yesno:"уведомления,без уведомлений" }}
+          </button>
+        </form>
+        <form method="post" action="{% url 'notifications:unlink_chat' chat.pk %}" data-confirm="Отвязать этот чат?">
+          {% csrf_token %}<button type="submit" class="btn btn--sm btn--danger">Отвязать</button>
+        </form>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="placeholder">Пока ни одного чата.</div>
+{% endif %}
