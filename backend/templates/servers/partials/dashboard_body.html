@@ -7,6 +7,7 @@
     <div class="stat{% if summary.offline %} stat--crit{% endif %}"><div class="stat__label">Offline</div><div class="stat__value">{{ summary.offline }}</div></div>
     <div class="stat{% if summary.pending %} stat--pending{% endif %}"><div class="stat__label">Ожидают агента</div><div class="stat__value">{{ summary.pending }}</div></div>
     <div class="stat{% if summary.failed_services %} stat--crit{% endif %}"><div class="stat__label">Упавшие сервисы</div><div class="stat__value">{{ summary.failed_services }}</div></div>
+    <a class="stat stat--link{% if summary.open_alerts %} stat--crit{% else %} stat--ok{% endif %}" href="{% url 'alerts:list' %}"><div class="stat__label">Активные алерты →</div><div class="stat__value">{{ summary.open_alerts }}</div></a>
   </section>
 
   {% if servers %}

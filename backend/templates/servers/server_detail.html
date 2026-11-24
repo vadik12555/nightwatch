@@ -29,6 +29,16 @@
   </div>
 </div>
 
+{% if open_alerts %}
+  <div class="alert-banner">
+    <div class="alert-banner__title">🚨 Активные алерты: {{ open_alerts|length }}</div>
+    {% for alert in open_alerts %}
+      <div class="alert-banner__row"><span class="sev sev--{{ alert.severity }}">{{ alert.get_severity_display }}</span> {{ alert.message }}</div>
+    {% endfor %}
+    <a href="{% url 'alerts:list' %}?server={{ server.pk }}&status=all">История алертов сервера →</a>
+  </div>
+{% endif %}
+
 <div id="stats" hx-get="{% url 'servers:stats' server.pk %}" hx-trigger="every 10s">
   {% include "servers/partials/stats.html" %}
 </div>

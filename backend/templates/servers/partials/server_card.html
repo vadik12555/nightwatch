@@ -25,7 +25,9 @@
     {% endif %}
   {% endwith %}
 
-  {% if server.failed_services %}
+  {% if server.open_alerts %}
+    <div class="server-card__alert">🚨 Активных алертов: {{ server.open_alerts }}{% if server.failed_services %} · упавших сервисов: {{ server.failed_services }}{% endif %}</div>
+  {% elif server.failed_services %}
     <div class="server-card__alert">⚠ Упавших сервисов: {{ server.failed_services }}</div>
   {% endif %}
   <div class="server-card__seen">Последний отчёт: {{ server.last_seen|ago }}</div>

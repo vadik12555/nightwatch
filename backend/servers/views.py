@@ -119,6 +119,7 @@ def server_detail(request: HttpRequest, pk: int) -> HttpResponse:
         "ranges": RANGES,
         "default_range": DEFAULT_RANGE,
         "levels": LogEntry.Level.choices,
+        "open_alerts": list(server.alerts.open()),
     }
     return render(request, "servers/server_detail.html", context)
 
