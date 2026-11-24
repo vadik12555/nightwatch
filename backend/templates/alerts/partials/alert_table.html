@@ -1,0 +1,36 @@
+{% load nightwatch %}
+{# Refreshed by HTMX every 15 s with the same filters #}
+<div id="alert-table" hx-get="{{ request.get_full_path }}" hx-trigger="every 15s" hx-swap="outerHTML">
+  {% if page.object_list %}
+    <div class="alert-list">
+      {% for alert in page.object_list %}
+        <div class="alert-row alert-row--{{ alert.status }} alert-row--{{ alert.severity }}">
+          <span class="sev sev--{{ alert.severity }}">{{ alert.get_severity_display }}</span>
+          <div class="alert-row__main">
+            <div class="alert-row__title">
+              <a href="{{ alert.server.get_absolute_url }}">{{ alert.server.name }}</a>
+              <span class="tag">{{ alert.get_kind_display }}</span>
+            </div>
+            <div class="alert-row__msg">{{ alert.message }}</div>
+          </div>
+          <div class="alert-row__time">
+            <div>{{ alert.opened_at|date:"d.m H:i" }}</div>
+            <div class="muted">{% if alert.is_open %}идёт {{ alert.duration.total_seconds|duration_short }}{% else %}длился {{ alert.duration.total_seconds|duration_short }}{% endif %}</div>
+          </div>
+          <span class="state state--{{ alert.status }}">{{ alert.get_status_display }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    {% if page.has_other_pages %}
+      <div class="pager">
+        {% if page.has_previous %}<a class="btn btn--sm btn--ghost" href="?status={{ status }}&server={{ server_id }}&page={{ page.previous_page_number }}">← Новее</a>{% endif %}
+        <span class="muted">Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}<a class="btn btn--sm btn--ghost" href="?status={{ status }}&server={{ server_id }}&page={{ page.next_page_number }}">Старее →</a>{% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="placeholder">
+      {% if status == "open" %}✅ Активных алертов нет — всё работает.{% else %}Алертов пока не было.{% endif %}
+    </div>
+  {% endif %}
+</div>

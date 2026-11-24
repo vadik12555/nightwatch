@@ -20,8 +20,13 @@
           <span>Night<b>Watch</b></span>
         </a>
         <nav class="nav">
-          {% with current=request.resolver_match.url_name %}
-            <a href="{% url 'servers:dashboard' %}" class="nav__link{% if current == 'dashboard' %} is-active{% endif %}">Серверы</a>
+          {% with ns=request.resolver_match.namespace current=request.resolver_match.url_name %}
+            <a href="{% url 'servers:dashboard' %}" class="nav__link{% if ns == 'servers' %} is-active{% endif %}">Серверы</a>
+            <a href="{% url 'alerts:list' %}" class="nav__link{% if ns == 'alerts' and current != 'rules' and current != 'rule_create' and current != 'rule_edit' %} is-active{% endif %}">
+              Алерты{% if nav_open_alerts %} <span class="nav__badge">{{ nav_open_alerts }}</span>{% endif %}
+            </a>
+            <a href="{% url 'alerts:rules' %}" class="nav__link{% if current == 'rules' or current == 'rule_create' or current == 'rule_edit' %} is-active{% endif %}">Правила</a>
+            <a href="{% url 'notifications:telegram' %}" class="nav__link{% if ns == 'notifications' %} is-active{% endif %}">Telegram</a>
             {% if user.is_staff %}<a href="{% url 'admin:index' %}" class="nav__link">Админка</a>{% endif %}
           {% endwith %}
         </nav>

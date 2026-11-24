@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Правила алертов{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Правила алертов</h1>
+    <p class="muted">Алерт открывается, когда условие выполняется без перерыва всю указанную длительность</p>
+  </div>
+  <a class="btn btn--primary" href="{% url 'alerts:rule_create' %}">+ Новое правило</a>
+</div>
+
+<section class="card">
+  {% if rules %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Название</th><th>Условие</th><th>Серверы</th><th>Важность</th><th>Статус</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for rule in rules %}
+            <tr{% if not rule.is_enabled %} class="is-disabled"{% endif %}>
+              <td><a href="{% url 'alerts:rule_edit' rule.pk %}">{{ rule.name }}</a></td>
+              <td class="mono">{{ rule.expression }}</td>
+              <td>{{ rule.server.name|default:"все" }}</td>
+              <td><span class="sev sev--{{ rule.severity }}">{{ rule.get_severity_display }}</span></td>
+              <td>
+                <form method="post" action="{% url 'alerts:rule_toggle' rule.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="switch{% if rule.is_enabled %} is-on{% endif %}" aria-pressed="{{ rule.is_enabled|yesno:'true,false' }}">
+                    <span class="switch__knob"></span>{{ rule.is_enabled|yesno:"включено,выключено" }}
+                  </button>
+                </form>
+              </td>
+              <td class="table__actions">
+                <a class="btn btn--sm btn--ghost" href="{% url 'alerts:rule_edit' rule.pk %}">Изменить</a>
+                <form method="post" action="{% url 'alerts:rule_delete' rule.pk %}" data-confirm="Удалить правило «{{ rule.name }}»?">
+                  {% csrf_token %}<button type="submit" class="btn btn--sm btn--danger">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="placeholder">Правил пока нет. <a href="{% url 'alerts:rule_create' %}">Создать первое →</a></div>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2 style="margin-bottom: 10px">Встроенные проверки</h2>
+  <ul class="howto">
+    <li>🔴 <span><b>Сервер недоступен</b> — агент молчит дольше {{ offline_minutes|default:"2" }} минут. Метрики такого сервера не оцениваются, его алерты «замораживаются» до возвращения.</span></li>
+    <li>🔴 <span><b>Сервис упал</b> — systemd-юнит из конфига агента перешёл в состояние <code>failed</code>.</span></li>
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{% if rule %}{{ rule.name }}{% else %}Новое правило{% endif %}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'alerts:rules' %}">Правила</a> / <span>{% if rule %}{{ rule.name }}{% else %}Новое правило{% endif %}</span></nav>
+<div class="page-head">
+  <div>
+    <h1>{% if rule %}Изменить правило{% else %}Новое правило{% endif %}</h1>
+    <p class="muted">Например: CPU &gt; 90% дольше 5 минут → warning</p>
+  </div>
+</div>
+
+<div class="form-layout">
+  <section class="card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        {% if field.name == "is_enabled" %}
+          <label class="checkbox">{{ field }} {{ field.label|capfirst }}</label>
+        {% else %}
+          <div class="field">
+            <label for="{{ field.id_for_label }}">{{ field.label|capfirst }}</label>
+            {{ field }}
+            {% if field.errors %}{{ field.errors }}{% endif %}
+            {% if field.help_text %}<div class="help">{{ field.help_text }}</div>{% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      {% if form.non_field_errors %}{{ form.non_field_errors }}{% endif %}
+      <div style="margin-top: 18px">
+        <button type="submit" class="btn btn--primary">Сохранить</button>
+        <a href="{% url 'alerts:rules' %}" class="btn btn--ghost">Отмена</a>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2 style="margin-bottom: 14px">Как это работает</h2>
+    <ol class="howto">
+      <li>⏱ <span>Каждые <b>30 секунд</b> Celery проверяет правило по последним метрикам каждого сервера.</span></li>
+      <li>📈 <span>Алерт открывается, только если <b>все</b> замеры за выбранную длительность удовлетворяют условию — короткий всплеск не разбудит ночью.</span></li>
+      <li>✅ <span>Когда последнее значение возвращается в норму, алерт закрывается, а в Telegram приходит «Восстановлено».</span></li>
+      <li>🔁 <span>Повторных уведомлений нет: по одной проблеме открыт максимум один алерт.</span></li>
+    </ol>
+  </section>
+</div>
+{% endblock %}

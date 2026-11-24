@@ -7,6 +7,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),
     path("api/v1/", include("metrics.api_urls")),
+    path("alerts/", include("alerts.urls")),
+    path("telegram/", include("notifications.urls")),
     path("healthz/", views.healthz, name="healthz"),
     path("", include("servers.urls")),
 ]

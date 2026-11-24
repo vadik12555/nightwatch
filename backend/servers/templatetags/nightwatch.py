@@ -75,3 +75,13 @@ def ago(moment: datetime | None) -> str:
     if seconds < 86_400:
         return f"{seconds // 3_600} ч назад"
     return f"{seconds // 86_400} д назад"
+
+
+@register.filter
+def duration_short(seconds: float | None) -> str:
+    """Alert durations: '45 с', '12 мин', '3 ч 10 мин', '2 д 4 ч'."""
+    if seconds is None:
+        return "—"
+    from notifications.formatting import humanize_duration
+
+    return humanize_duration(seconds)

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Алерты{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Алерты</h1>
+    <p class="muted">Проверка каждые 30 секунд: правила по метрикам, недоступные серверы, упавшие сервисы</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn--ghost" href="{% url 'alerts:rules' %}">Правила</a>
+    <a class="btn btn--ghost" href="{% url 'notifications:telegram' %}">Уведомления в Telegram</a>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card__head">
+    <nav class="segmented" aria-label="Статус">
+      {% for value, label in tabs %}
+        <a class="segmented__btn{% if value == status %} is-active{% endif %}"
+           href="?status={{ value }}{% if server_id %}&server={{ server_id }}{% endif %}">
+          {{ label }}{% if value == "open" %} · {{ open_count }}{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+    <form method="get" class="log-filters">
+      <input type="hidden" name="status" value="{{ status }}">
+      <label class="sr-only" for="alert-server">Сервер</label>
+      <select id="alert-server" name="server" onchange="this.form.submit()">
+        <option value="">Все серверы</option>
+        {% for s in servers %}
+          <option value="{{ s.pk }}"{% if s.pk|stringformat:"s" == server_id %} selected{% endif %}>{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  {% include "alerts/partials/alert_table.html" %}
+</section>
+{% endblock %}
