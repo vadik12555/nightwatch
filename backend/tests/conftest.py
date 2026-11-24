@@ -103,3 +103,56 @@ def make_report():
         return report
 
     return factory
+
+
+# --- AI: a fake LLM provider ----------------------------------------------------------
+
+
+def hash_embedding(text: str, dims: int = 1024) -> list[float]:
+    """Deterministic bag-of-words vector: texts sharing words get close vectors."""
+    import math
+    import re
+    import zlib
+
+    vector = [0.0] * dims
+    for token in re.findall(r"\w+", text.lower()):
+        vector[zlib.crc32(token.encode()) % dims] += 1.0
+    norm = math.sqrt(sum(x * x for x in vector)) or 1.0
+    return [x / norm for x in vector]
+
+
+class FakeLLM:
+    model = "fake-llm"
+
+    def __init__(self):
+        self.reply = "### Что случилось\nДиск заполнен [1].\n```bash\ndf -h\n```"
+        self.fail = False
+        self.chat_calls: list[list[dict]] = []
+        self.embed_calls: list[list[str]] = []
+
+    def chat(self, messages, *, temperature=0.2):
+        from ai.providers import LLMError
+
+        self.chat_calls.append(messages)
+        if self.fail:
+            raise LLMError("LLM недоступна (тест)")
+        return self.reply
+
+    def embed(self, texts):
+        self.embed_calls.append(list(texts))
+        return [hash_embedding(text) for text in texts]
+
+    @property
+    def last_prompt(self) -> str:
+        return "\n".join(m["content"] for m in self.chat_calls[-1])
+
+
+@pytest.fixture
+def fake_llm(monkeypatch, settings):
+    """AI enabled, every call goes to FakeLLM instead of a real API."""
+    settings.LLM_API_KEY = "test-key"
+    settings.RAG_MAX_DISTANCE = 0.95
+    llm = FakeLLM()
+    monkeypatch.setattr("ai.services.get_provider", lambda: llm)
+    monkeypatch.setattr("ai.reports.get_provider", lambda: llm)
+    return llm
