@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Вход{% endblock %}
+
+{% block content %}
+<div class="auth">
+  <div class="card auth__card">
+    <div class="auth__brand">
+      <img src="{% static 'img/logo.svg' %}" alt="">
+      <div>
+        <h1>Night<span style="color: var(--accent)">Watch</span></h1>
+        <p>Мониторинг серверов с AI-анализом логов</p>
+      </div>
+    </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert--error" style="margin-bottom: 16px">Неверный логин или пароль.</div>
+      {% endif %}
+      <div class="field">
+        <label for="{{ form.username.id_for_label }}">Логин</label>
+        {{ form.username }}
+      </div>
+      <div class="field">
+        <label for="{{ form.password.id_for_label }}">Пароль</label>
+        {{ form.password }}
+      </div>
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit" class="btn btn--primary btn--block">Войти</button>
+    </form>
+    <div class="auth__footer">Self-hosted · ваши данные остаются на вашем сервере</div>
+  </div>
+</div>
+{% endblock %}
