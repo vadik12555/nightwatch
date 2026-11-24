@@ -1,0 +1,8 @@
+{% load nightwatch %}
+<div class="meter">
+  <div class="meter__row">
+    <span class="meter__label">{{ label }}</span>
+    <span class="meter__value">{{ value|floatformat:0 }}%{% if total %} <span class="muted">· {{ used|filesizeformat }} / {{ total|filesizeformat }}</span>{% endif %}</span>
+  </div>
+  <div class="meter__track"><div class="meter__bar meter__bar--{{ value|meter_level }}" style="width: {{ value|css_percent }}%"></div></div>
+</div>

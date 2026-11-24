@@ -1,0 +1,15 @@
+{% if logs %}
+  <div class="log-list">
+    {% for log in logs %}
+      <div class="log-row log-row--{{ log.level }}">
+        <time class="log-row__time mono" datetime="{{ log.timestamp|date:'c' }}">{{ log.timestamp|date:"d.m H:i:s" }}</time>
+        <span><span class="badge badge--{{ log.level }}">{{ log.get_level_display }}</span></span>
+        <span class="log-row__source mono" title="{{ log.source }}">{{ log.source }}</span>
+        <span class="log-row__msg mono">{{ log.message }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="log-footer muted">Показаны последние {{ logs|length }} записей{% if filtered %} по фильтру{% endif %}</div>
+{% else %}
+  <div class="placeholder">{% if filtered %}Ничего не найдено по фильтру.{% else %}Логов пока нет.{% endif %}</div>
+{% endif %}

@@ -1,0 +1,27 @@
+{% load static %}
+{# Re-fetched by HTMX every 10 s; the response replaces this whole element (and re-arms polling). #}
+<div id="dashboard-body" hx-get="{% url 'servers:dashboard' %}" hx-trigger="every 10s" hx-swap="outerHTML">
+  <section class="summary">
+    <div class="stat stat--accent"><div class="stat__label">Всего серверов</div><div class="stat__value">{{ summary.total }}</div></div>
+    <div class="stat stat--ok"><div class="stat__label">Online</div><div class="stat__value">{{ summary.online }}</div></div>
+    <div class="stat{% if summary.offline %} stat--crit{% endif %}"><div class="stat__label">Offline</div><div class="stat__value">{{ summary.offline }}</div></div>
+    <div class="stat{% if summary.pending %} stat--pending{% endif %}"><div class="stat__label">Ожидают агента</div><div class="stat__value">{{ summary.pending }}</div></div>
+    <div class="stat{% if summary.failed_services %} stat--crit{% endif %}"><div class="stat__label">Упавшие сервисы</div><div class="stat__value">{{ summary.failed_services }}</div></div>
+  </section>
+
+  {% if servers %}
+    <section class="server-grid">
+      {% for server in servers %}
+        {% include "servers/partials/server_card.html" %}
+      {% endfor %}
+    </section>
+  {% else %}
+    <div class="empty">
+      <img class="empty__icon" src="{% static 'img/logo.svg' %}" alt="">
+      <h2>Пока нет ни одного сервера</h2>
+      <p>Добавьте сервер, установите на него агента одной командой — и метрики появятся здесь через несколько секунд.
+        Для демо выполните <code>make seed</code>.</p>
+      <a class="btn btn--primary" href="{% url 'servers:create' %}">+ Добавить первый сервер</a>
+    </div>
+  {% endif %}
+</div>

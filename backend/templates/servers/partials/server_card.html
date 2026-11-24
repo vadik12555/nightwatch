@@ -1,0 +1,32 @@
+{% load nightwatch %}
+<a class="server-card status-{{ server.status }}" href="{{ server.get_absolute_url }}">
+  <div class="server-card__head">
+    <div class="server-card__title">
+      <h3>{{ server.name }}</h3>
+      {% if server.is_demo %}<span class="tag">demo</span>{% endif %}
+    </div>
+    {% include "servers/partials/status_pill.html" %}
+  </div>
+  <div class="server-card__meta mono">{{ server.hostname|default:"hostname неизвестен" }} · {{ server.os|default:"ОС неизвестна" }}</div>
+
+  {% with m=server.latest %}
+    {% if m %}
+      <div class="meters">
+        {% include "servers/partials/meter.html" with label="CPU" value=m.cpu_percent %}
+        {% include "servers/partials/meter.html" with label="RAM" value=m.memory_percent used=m.memory_used total=m.memory_total %}
+        {% include "servers/partials/meter.html" with label="Диск" value=m.disk_percent used=m.disk_used total=m.disk_total %}
+      </div>
+      <div class="server-card__foot">
+        <span title="Load average за 1 / 5 / 15 минут">LA {{ m.load_1|floatformat:2 }} · {{ m.load_5|floatformat:2 }} · {{ m.load_15|floatformat:2 }}</span>
+        <span title="Аптайм">⏱ {{ m.uptime_seconds|duration }}</span>
+      </div>
+    {% else %}
+      <div class="server-card__empty">Агент ещё не прислал данных</div>
+    {% endif %}
+  {% endwith %}
+
+  {% if server.failed_services %}
+    <div class="server-card__alert">⚠ Упавших сервисов: {{ server.failed_services }}</div>
+  {% endif %}
+  <div class="server-card__seen">Последний отчёт: {{ server.last_seen|ago }}</div>
+</a>

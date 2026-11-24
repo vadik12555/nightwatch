@@ -1,0 +1,44 @@
+{% load nightwatch %}
+{% if snapshot %}
+<section class="tiles">
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--c-cpu)"></i>CPU</div>
+    <div class="tile__value">{{ snapshot.cpu_percent|floatformat:1 }}<small>%</small></div>
+    <div class="meter__track"><div class="meter__bar meter__bar--{{ snapshot.cpu_percent|meter_level }}" style="width: {{ snapshot.cpu_percent|css_percent }}%"></div></div>
+  </div>
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--c-mem)"></i>Память</div>
+    <div class="tile__value">{{ snapshot.memory_percent|floatformat:1 }}<small>%</small></div>
+    <div class="meter__track"><div class="meter__bar meter__bar--{{ snapshot.memory_percent|meter_level }}" style="width: {{ snapshot.memory_percent|css_percent }}%"></div></div>
+    <div class="tile__detail" style="margin-top: 6px">{{ snapshot.memory_used|filesizeformat }} из {{ snapshot.memory_total|filesizeformat }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--c-disk)"></i>Диск</div>
+    <div class="tile__value">{{ snapshot.disk_percent|floatformat:1 }}<small>%</small></div>
+    <div class="meter__track"><div class="meter__bar meter__bar--{{ snapshot.disk_percent|meter_level }}" style="width: {{ snapshot.disk_percent|css_percent }}%"></div></div>
+    <div class="tile__detail" style="margin-top: 6px">{{ snapshot.disk_used|filesizeformat }} из {{ snapshot.disk_total|filesizeformat }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--c-load1)"></i>Load average</div>
+    <div class="tile__value">{{ snapshot.load_1|floatformat:2 }}</div>
+    <div class="tile__detail">5 мин: {{ snapshot.load_5|floatformat:2 }} · 15 мин: {{ snapshot.load_15|floatformat:2 }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--c-sent)"></i>Сеть</div>
+    <div class="tile__value" style="font-size: 17px; margin-top: 8px">↑ {{ snapshot.net_sent_bps|bytes_rate }}</div>
+    <div class="tile__detail">↓ {{ snapshot.net_recv_bps|bytes_rate }}</div>
+  </div>
+  <div class="tile">
+    <div class="tile__label"><i style="background: var(--muted)"></i>Аптайм</div>
+    <div class="tile__value" style="font-size: 20px">{{ snapshot.uptime_seconds|duration }}</div>
+    <div class="tile__detail">отчёт {{ server.last_seen|ago }}</div>
+  </div>
+</section>
+{% else %}
+<div class="card">
+  <div class="placeholder">
+    Агент ещё не присылал метрики.
+    <a href="{% url 'servers:install' server.pk %}">Как установить агента →</a>
+  </div>
+</div>
+{% endif %}

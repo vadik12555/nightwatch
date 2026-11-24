@@ -1,0 +1,14 @@
+{% load nightwatch %}
+{% if services %}
+  <ul class="service-list">
+    {% for service in services %}
+      <li class="service service--{{ service.status }}" title="обновлено {{ service.updated_at|ago }}">
+        <span class="service__dot"></span>
+        <span class="service__name">{{ service.name }}</span>
+        <span class="service__state">{{ service.status }}</span>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="placeholder">Сервисы не настроены.<br>Добавьте их в <code>services:</code> в agent.yaml.</div>
+{% endif %}

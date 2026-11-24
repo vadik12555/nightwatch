@@ -1,0 +1,6 @@
+{% if live %}
+  {# On the server page the pill refreshes itself #}
+  <span class="pill pill--{{ server.status }}" hx-get="{% url 'servers:status' server.pk %}" hx-trigger="every 10s" hx-swap="outerHTML">{{ server.get_status_display }}</span>
+{% else %}
+  <span class="pill pill--{{ server.status }}">{{ server.get_status_display }}</span>
+{% endif %}

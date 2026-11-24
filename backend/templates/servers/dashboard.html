@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Серверы{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Серверы</h1>
+    <p class="muted">Состояние инфраструктуры в реальном времени</p>
+  </div>
+  <div class="live-indicator"><span class="pulse-dot"></span>Live · обновление каждые 10 с</div>
+</div>
+
+{% include "servers/partials/dashboard_body.html" %}
+{% endblock %}

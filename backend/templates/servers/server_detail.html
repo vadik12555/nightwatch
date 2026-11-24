@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load static nightwatch %}
+{% block title %}{{ server.name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'servers:dashboard' %}">Серверы</a> / <span>{{ server.name }}</span></nav>
+
+<div class="page-head">
+  <div>
+    <div class="title-row">
+      <h1>{{ server.name }}</h1>
+      {% include "servers/partials/status_pill.html" with live=True %}
+      {% if server.is_demo %}<span class="tag">demo</span>{% endif %}
+    </div>
+    <dl class="facts">
+      <div><dt>Hostname</dt><dd class="mono">{{ server.hostname|default:"—" }}</dd></div>
+      <div><dt>ОС</dt><dd>{{ server.os|default:"—" }}</dd></div>
+      <div><dt>Агент</dt><dd class="mono">{{ server.agent_version|default:"—" }}</dd></div>
+      <div><dt>Токен</dt><dd class="mono">{{ server.token_prefix }}…</dd></div>
+    </dl>
+  </div>
+  <div class="actions">
+    <a class="btn btn--ghost" href="{% url 'servers:install' server.pk %}">Установка агента</a>
+    <form method="post" action="{% url 'servers:delete' server.pk %}"
+          data-confirm="Удалить сервер «{{ server.name }}» вместе со всеми метриками и логами?">
+      {% csrf_token %}
+      <button type="submit" class="btn btn--danger">Удалить</button>
+    </form>
+  </div>
+</div>
+
+<div id="stats" hx-get="{% url 'servers:stats' server.pk %}" hx-trigger="every 10s">
+  {% include "servers/partials/stats.html" %}
+</div>
+
+<section class="card">
+  <div class="card__head">
+    <div>
+      <h2>Метрики</h2>
+      <div class="card__sub">Средние значения по интервалам; разрывы — агент не присылал данные</div>
+    </div>
+    <div class="segmented" role="tablist" aria-label="Период">
+      {% for key, r in ranges.items %}
+        <button type="button" role="tab" class="segmented__btn{% if key == default_range %} is-active{% endif %}" data-range="{{ key }}">{{ r.label }}</button>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="charts" id="charts" data-metrics-url="{% url 'servers:metrics' server.pk %}" data-range="{{ default_range }}">
+    <div class="chart">
+      <div class="chart__title">CPU / RAM / Диск, %</div>
+      <div class="chart__canvas"><canvas id="chart-usage" aria-label="График загрузки CPU, памяти и диска"></canvas></div>
+    </div>
+    <div class="chart">
+      <div class="chart__title">Load average</div>
+      <div class="chart__canvas"><canvas id="chart-load" aria-label="График load average"></canvas></div>
+    </div>
+    <div class="chart">
+      <div class="chart__title">Сеть</div>
+      <div class="chart__canvas"><canvas id="chart-net" aria-label="График сетевого трафика"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <div class="card__head">
+      <h2>Сервисы systemd</h2>
+      <span class="card__sub">обновление каждые 15 с</span>
+    </div>
+    <div hx-get="{% url 'servers:services' server.pk %}" hx-trigger="every 15s">
+      {% include "servers/partials/services.html" %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card__head">
+      <h2>Последние логи</h2>
+      {# Any input change or the 15 s timer re-requests the list with the current filters #}
+      <form class="log-filters" hx-get="{% url 'servers:logs' server.pk %}" hx-target="#logs"
+            hx-trigger="input delay:300ms, every 15s" onsubmit="return false">
+        <label class="sr-only" for="log-level">Уровень</label>
+        <select id="log-level" name="level">
+          <option value="">Все уровни</option>
+          {% for value, label in levels %}<option value="{{ value }}">{{ label }}+</option>{% endfor %}
+        </select>
+        <label class="sr-only" for="log-q">Поиск</label>
+        <input id="log-q" type="search" name="q" placeholder="Поиск по тексту или источнику" autocomplete="off">
+      </form>
+    </div>
+    <div id="logs">
+      {% include "servers/partials/logs.html" %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script src="{% static 'js/server-charts.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% load nightwatch %}
+{% if server.last_seen %}
+  <div class="waiting waiting--ok">
+    ✓ <span>Агент на связи: последний отчёт {{ server.last_seen|ago }}{% if server.hostname %} от <code>{{ server.hostname }}</code>{% endif %}.</span>
+    <a class="btn btn--primary btn--sm" style="margin-left: auto" href="{{ server.get_absolute_url }}">Открыть сервер →</a>
+  </div>
+{% else %}
+  <div class="waiting">
+    <span class="spinner"></span>
+    <span>Ждём первый отчёт агента… страница обновится сама.</span>
+  </div>
+{% endif %}

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Установка агента · {{ server.name }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs">
+  <a href="{% url 'servers:dashboard' %}">Серверы</a> /
+  <a href="{{ server.get_absolute_url }}">{{ server.name }}</a> / <span>Установка агента</span>
+</nav>
+<div class="page-head">
+  <div>
+    <h1>Подключение агента</h1>
+    <p class="muted">Сервер <b>{{ server.name }}</b> · Linux с systemd и Python 3.9+</p>
+  </div>
+  <div class="actions">
+    <form method="post" action="{% url 'servers:rotate_token' server.pk %}"
+          data-confirm="Выпустить новый токен? Агент со старым токеном перестанет отправлять данные.">
+      {% csrf_token %}
+      <button type="submit" class="btn btn--ghost">Перевыпустить токен</button>
+    </form>
+  </div>
+</div>
+
+<section class="card">
+  <div class="steps">
+    <div class="step">
+      <h2>Токен сервера</h2>
+      {% if token %}
+        <div class="codebox">
+          <pre id="token">{{ token }}</pre>
+          <button type="button" class="btn" data-copy="#token">Копировать</button>
+        </div>
+        <div class="token-warning">⚠ <span>Сохраните токен сейчас: он показывается <b>один раз</b>, в базе хранится только его хэш.
+          Если потеряете — просто перевыпустите.</span></div>
+      {% else %}
+        <p>Токен уже был показан и больше недоступен (хранится только хэш, начало: <code>{{ server.token_prefix }}…</code>).
+          Чтобы получить новую команду установки, перевыпустите токен.</p>
+      {% endif %}
+    </div>
+
+    <div class="step">
+      <h2>Установите агента</h2>
+      <p>Выполните на сервере. Скрипт создаст пользователя <code>nightwatch</code>, virtualenv в <code>/opt/nightwatch-agent</code>,
+        конфиг <code>/etc/nightwatch/agent.yaml</code> и запустит systemd-сервис.</p>
+      <div class="codebox">
+        <pre id="install-command">{{ command }}</pre>
+        <button type="button" class="btn" data-copy="#install-command">Копировать</button>
+      </div>
+      <details class="manual" style="margin-top: 12px">
+        <summary>Установка вручную из репозитория</summary>
+        <div class="codebox">
+          <pre>git clone https://github.com/vadik12555/nightwatch.git
+cd nightwatch
+sudo ./agent/install.sh --url {{ base_url }} --token {% if token %}{{ token }}{% else %}&lt;TOKEN&gt;{% endif %}
+
+# проверить:
+systemctl status nightwatch-agent
+journalctl -u nightwatch-agent -f</pre>
+        </div>
+      </details>
+    </div>
+
+    <div class="step">
+      <h2>Дождитесь первого отчёта</h2>
+      <div hx-get="{% url 'servers:install_status' server.pk %}" hx-trigger="load, every 3s" hx-swap="innerHTML">
+        {% include "servers/partials/install_status.html" %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
