@@ -1,0 +1,102 @@
+# NightWatch stack: docker compose up -d --build   →   http://localhost
+#
+#   nginx  ──▶ web (Django + Gunicorn) ──▶ db (PostgreSQL 16 + pgvector)
+#                                     └──▶ redis (cache, rate-limit counters, Celery broker)
+#   celery (worker + beat) ──▶ redis, db
+name: nightwatch
+
+x-backend-env: &backend-env
+  DATABASE_URL: postgres://${POSTGRES_USER:-nightwatch}:${POSTGRES_PASSWORD:-nightwatch}@db:5432/${POSTGRES_DB:-nightwatch}
+  REDIS_URL: redis://redis:6379/0
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+  image: nightwatch-backend:latest
+  env_file: .env
+  environment: *backend-env
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nightwatch}
+      POSTGRES_USER: ${POSTGRES_USER:-nightwatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nightwatch}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      DJANGO_MIGRATE: "1"  # only web runs migrations/collectstatic on start
+    volumes:
+      - static:/app/staticfiles
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz/', timeout=4)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 40s
+      retries: 6
+
+  celery:
+    <<: *backend
+    # Worker with embedded beat scheduler: fine for one node. At scale run beat separately.
+    command: ["celery", "-A", "config", "worker", "--beat", "--loglevel=info",
+              "--concurrency=2", "--schedule=/tmp/celerybeat-schedule"]
+    depends_on:
+      web:
+        condition: service_healthy  # migrations are applied by web first
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$$HOSTNAME --timeout 5 | grep -q pong"]
+      interval: 30s
+      timeout: 15s
+      start_period: 30s
+      retries: 3
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - static:/static:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  static:
