@@ -1,0 +1,41 @@
+# Tooling configuration for the whole monorepo (backend + agent).
+# The project itself is not a pip package, so there is no [project] table.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # flake8-bugbear
+    "UP",       # pyupgrade
+    "C4",       # flake8-comprehensions
+    "SIM",      # flake8-simplify
+    "DJ",       # flake8-django
+    "S",        # flake8-bandit (security)
+    "RUF",      # ruff-specific rules
+]
+ignore = [
+    "RUF001", "RUF002", "RUF003",  # Cyrillic letters in strings/comments are intentional
+    "RUF012",                      # Django Meta / DRF class attributes are fine as mutable
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "S105", "S106", "S311"]
+"backend/metrics/demo.py" = ["S311"]  # pseudo-random demo data, not crypto
+"agent/nightwatch_agent.py" = ["S603", "S607"]  # calls systemctl/journalctl with fixed args
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "accounts", "servers", "metrics", "nightwatch_agent"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings_test"
+django_find_project = false
+pythonpath = ["backend", "agent"]
+testpaths = ["backend/tests", "agent/tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"
+filterwarnings = ["error::RuntimeWarning"]
