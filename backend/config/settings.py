@@ -61,6 +61,8 @@ INSTALLED_APPS = [
     "accounts",
     "servers",
     "metrics",
+    "alerts",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -185,6 +187,10 @@ CELERY_TASK_IGNORE_RESULT = True
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_BEAT_SCHEDULE = {
+    "evaluate-alerts": {
+        "task": "alerts.tasks.evaluate_alerts",
+        "schedule": timedelta(seconds=env_int("NIGHTWATCH_ALERTS_INTERVAL_SECONDS", 30)),
+    },
     "prune-old-data": {
         "task": "metrics.tasks.prune_old_data",
         "schedule": timedelta(hours=1),
@@ -198,7 +204,7 @@ CELERY_BEAT_SCHEDULE = {
 # --- NightWatch -------------------------------------------------------------------
 
 # A server is considered offline when the agent has not reported for this long.
-NIGHTWATCH_OFFLINE_AFTER = timedelta(seconds=env_int("NIGHTWATCH_OFFLINE_AFTER_SECONDS", 90))
+NIGHTWATCH_OFFLINE_AFTER = timedelta(seconds=env_int("NIGHTWATCH_OFFLINE_AFTER_SECONDS", 120))
 # DRF rate string for the ingest endpoint, applied per server (not per IP).
 NIGHTWATCH_INGEST_RATE = os.environ.get("NIGHTWATCH_INGEST_RATE", "30/min")
 NIGHTWATCH_METRICS_RETENTION_DAYS = env_int("NIGHTWATCH_METRICS_RETENTION_DAYS", 30)
@@ -210,6 +216,13 @@ NIGHTWATCH_PUBLIC_URL = os.environ.get("NIGHTWATCH_PUBLIC_URL", "").rstrip("/")
 # Where the agent files served by /agent/<file> live (repo layout and Docker image match).
 NIGHTWATCH_AGENT_DIR = Path(os.environ.get("NIGHTWATCH_AGENT_DIR", REPO_DIR / "agent"))
 NIGHTWATCH_DEPLOY_DIR = Path(os.environ.get("NIGHTWATCH_DEPLOY_DIR", REPO_DIR / "deploy"))
+
+# --- Telegram ------------------------------------------------------------------------
+
+# Token from @BotFather. Empty = bot and notifications are disabled (everything else works).
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+# Bot username without @, used for the t.me deep link on the "link chat" page.
+TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "").lstrip("@")
 
 # --- Logging ------------------------------------------------------------------------
 

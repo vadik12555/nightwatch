@@ -13,4 +13,6 @@ CELERY_TASK_ALWAYS_EAGER = True
 CELERY_BROKER_URL = "memory://"
 NIGHTWATCH_DEMO_MODE = False
 NIGHTWATCH_PUBLIC_URL = ""
+TELEGRAM_BOT_TOKEN = ""
+TELEGRAM_BOT_USERNAME = "nightwatch_test_bot"
 LOGGING = {"version": 1, "disable_existing_loggers": False}
