@@ -239,6 +239,20 @@ class TestChat:
         assert "[S] Данные сервера" in prompt
         assert "pg_wal" in prompt
 
+    def test_chunks_of_one_runbook_are_one_source(self, user, fake_llm):
+        long_runbook = "# Диск\n\n" + "\n\n".join(
+            f"## Шаг {i}\n\nдиск место space left device шаг {i}" for i in range(3)
+        )
+        services.run_indexing(services.create_runbook(title="Диск", content=long_runbook).pk)
+        fake_llm.reply = "См. [2]."
+
+        answer = services.run_answer(services.ask(user, "диск: no space left on device").pk)
+
+        [source] = answer.sources
+        assert source["n"] == "1, 2, 3"
+        assert source["cited"] is True
+        assert source["heading"].count("Шаг") == 3
+
     def test_history_is_sent_to_the_model(self, user, fake_llm):
         services.run_answer(services.ask(user, "Первый вопрос").pk)
         services.run_answer(services.ask(user, "Второй вопрос").pk)

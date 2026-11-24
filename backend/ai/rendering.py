@@ -17,13 +17,34 @@ ALLOWED_TAGS = {
     "ul", "ol", "li", "h2", "h3", "h4", "h5", "h6", "a",
     "table", "thead", "tbody", "tr", "th", "td",
 }  # fmt: skip
-ALLOWED_ATTRIBUTES = {"a": {"href", "title"}}
+ALLOWED_ATTRIBUTES = {"a": {"href", "title"}, "ol": {"start"}}
 
 CODE_BLOCK = re.compile(r"```(?:bash|sh|shell|console|zsh)?[ \t]*\n(.*?)```", re.S | re.I)
+INDENTED_FENCE = re.compile(r"^([ \t]+)(```|~~~)")
+
+
+def _dedent_fences(text: str) -> str:
+    """LLMs often indent ``` blocks inside list items; Python-Markdown only sees fences at
+    column 0, so such blocks would render as plain text. Move them to the left margin."""
+    lines, out, indent = text.splitlines(), [], None
+    for line in lines:
+        match = INDENTED_FENCE.match(line)
+        if indent is None and match:
+            indent = match.group(1)
+            out.append(line[len(indent) :])
+        elif indent is not None:
+            out.append(line.removeprefix(indent))
+            if line.strip().startswith(("```", "~~~")):
+                indent = None
+        else:
+            out.append(line)
+    return "\n".join(out)
 
 
 def render_markdown(text: str) -> SafeString:
-    html = markdown.markdown(text or "", extensions=["fenced_code", "sane_lists", "tables"])
+    html = markdown.markdown(
+        _dedent_fences(text or ""), extensions=["fenced_code", "sane_lists", "tables"]
+    )
     clean = nh3.clean(
         html,
         tags=ALLOWED_TAGS,

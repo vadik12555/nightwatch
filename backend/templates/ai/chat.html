@@ -26,9 +26,9 @@
           hx-on::before-request="document.getElementById('chat-empty')?.remove()"
           hx-on::after-request="if (event.detail.successful) { this.querySelector('textarea').value = ''; }">
       <select name="server" aria-label="Сервер для контекста">
-        <option value="">Без сервера — только runbook'и</option>
+        <option value="">Сервер: не выбран</option>
         {% for s in servers %}
-          <option value="{{ s.pk }}"{% if s.pk == selected_server %} selected{% endif %}>Контекст: {{ s.name }}</option>
+          <option value="{{ s.pk }}"{% if s.pk == selected_server %} selected{% endif %}>Сервер: {{ s.name }}</option>
         {% endfor %}
       </select>
       <textarea name="question" rows="2" maxlength="2000" required data-submit-on-enter

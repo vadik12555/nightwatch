@@ -90,6 +90,13 @@ class TestRendering:
         assert "javascript:" not in html
         assert "onerror" not in html
 
+    def test_fences_indented_inside_lists_still_render_as_code(self):
+        text = "1. **Проверить место**:\n   ```bash\n   df -h\n   ```\n2. Дальше"
+        html = rendering.render_markdown(text)
+        assert "<pre><code" in html
+        assert "df -h" in html
+        assert rendering.extract_commands(text) == ["df -h"]
+
     def test_code_blocks_and_commands(self):
         text = (
             "Шаги:\n```bash\n$ sudo journalctl --vacuum-size=500M\ndf -h\n```\n```python\nx=1\n```"

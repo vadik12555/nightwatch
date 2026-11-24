@@ -182,17 +182,27 @@ def run_answer(message_id: int, provider: LLMProvider | None = None) -> ChatMess
 
 
 def _sources(hits: list[retrieval.Hit], server: Server | None, answer: str) -> list[dict]:
+    # Several chunks of one runbook become one source: "[1, 3] Disk full".
+    by_runbook: dict[int, dict] = {}
+    for n, hit in enumerate(hits, start=1):
+        source = by_runbook.setdefault(
+            hit.chunk.runbook_id,
+            {
+                "type": "runbook",
+                "runbook_id": hit.chunk.runbook_id,
+                "title": hit.chunk.runbook.title,
+                "numbers": [],
+                "headings": [],
+                "distance": round(hit.distance, 3),
+                "cited": False,
+            },
+        )
+        source["numbers"].append(n)
+        source["headings"].append(hit.chunk.heading)
+        source["cited"] = source["cited"] or f"[{n}]" in answer
     sources = [
-        {
-            "n": str(n),
-            "type": "runbook",
-            "runbook_id": hit.chunk.runbook_id,
-            "title": hit.chunk.runbook.title,
-            "heading": hit.chunk.heading,
-            "distance": round(hit.distance, 3),
-            "cited": f"[{n}]" in answer,
-        }
-        for n, hit in enumerate(hits, start=1)
+        {**s, "n": ", ".join(map(str, s.pop("numbers"))), "heading": "; ".join(s.pop("headings"))}
+        for s in by_runbook.values()
     ]
     if server:
         sources.append(
