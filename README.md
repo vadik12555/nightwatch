@@ -37,7 +37,7 @@ NightWatch — платформа мониторинга, которую раз�
 
 **Этап 1 (готов):** сбор данных, API, веб-интерфейс, Docker, CI.
 **Этап 2 (готов):** правила алертов, Celery-проверки каждые 30 с, Telegram-бот на aiogram 3.
-**Дальше:** AI-анализ логов с RAG-чатом по runbook'ам (этап 3), см. [Roadmap](#roadmap).
+**Этап 3 (готов):** AI — «Объяснить» у ошибок в логах, RAG-чат по runbook'ам и данным серверов, еженедельная AI-сводка в Telegram. Работает с любым OpenAI-совместимым API, в том числе с локальной Ollama.
 
 ### Возможности
 
@@ -55,8 +55,16 @@ NightWatch — платформа мониторинга, которую раз�
   Celery beat проверяет всё каждые 30 с; по одной проблеме открыт максимум один алерт.
 - **Telegram-бот (aiogram 3):** привязка чата к аккаунту одноразовым кодом, уведомления об алерте
   и восстановлении, команды `/status` и `/servers`. Посторонним бот данные не показывает.
+- **AI «Объяснить»:** у строк ERROR/CRITICAL в логах кнопка открывает разбор: что случилось,
+  вероятная причина и команды для починки с кнопкой «Копировать». Ответ кэшируется по «отпечатку»
+  ошибки: та же ошибка с другим PID или IP повторно в LLM не отправляется.
+- **RAG-чат:** runbook'и команды (Markdown) режутся на фрагменты, эмбеддинги хранятся в pgvector
+  (HNSW-индекс). Ассистент отвечает по найденным фрагментам и по метрикам, алертам и логам
+  выбранного сервера и ставит ссылки на источники `[1]`, `[S]`.
+- **Еженедельная AI-сводка:** по понедельникам Celery собирает цифры за неделю, LLM пишет выводы
+  и рекомендации, сводка уходит в Telegram. Если LLM недоступна, уходят сами цифры.
 - **Демо-режим:** `seed_demo` создаёт парк из 5 серверов с недельной историей,
-  Celery поддерживает их «живыми».
+  Celery поддерживает их «живыми». В комплекте 6 примеров runbook'ов.
 
 ### Архитектура
 
@@ -87,6 +95,9 @@ flowchart LR
     C -- "уведомления" --> TG
     TG -- "/status, /servers" --> B
     B --> P
+    LLM["LLM API<br/>OpenAI-совместимый<br/>(OpenAI / Ollama)"]
+    W -- "чат, «Объяснить»" --> C
+    C -- "chat + embeddings" --> LLM
 ```
 
 Как рождается алерт:
@@ -134,15 +145,15 @@ sequenceDiagram
 |---|---|
 | `nginx` | Единственная точка входа: отдаёт статику, проксирует в Django, режет слишком большие запросы и флуд на ingest |
 | `web` | Django + DRF под Gunicorn: веб-интерфейс и API, при старте применяет миграции |
-| `db` | PostgreSQL 16 с расширением pgvector (эмбеддинги логов на этапе 3) |
+| `db` | PostgreSQL 16 с расширением pgvector: векторы runbook'ов для RAG, HNSW-индекс |
 | `redis` | Кэш Django, счётчики rate limit (общие для всех воркеров Gunicorn), брокер Celery |
-| `celery` | Фоновые и периодические задачи: проверка алертов каждые 30 с, отправка уведомлений, очистка старых данных, демо-симуляция |
+| `celery` | Фоновые и периодические задачи: проверка алертов каждые 30 с, уведомления, запросы к LLM (объяснения, чат, индексация runbook'ов), еженедельная AI-сводка, очистка старых данных |
 | `bot` | Telegram-бот (aiogram 3, long polling): привязка чатов, `/status`, `/servers`. Без токена спит и ничего не ломает |
 
 ### Стек
 
 Python 3.12 · Django 5.2 · Django REST Framework · PostgreSQL 16 + pgvector · Redis · Celery ·
-aiogram 3 · Gunicorn · Nginx · Docker Compose · HTMX · Chart.js · pytest + pytest-django · ruff · GitHub Actions
+aiogram 3 · OpenAI-совместимый LLM API (OpenAI / Ollama) · pgvector RAG · Gunicorn · Nginx · Docker Compose · HTMX · Chart.js · pytest + pytest-django · ruff · GitHub Actions
 
 ### Быстрый старт
 
@@ -214,13 +225,59 @@ sudo -u nightwatch /opt/nightwatch-agent/venv/bin/python /opt/nightwatch-agent/n
 ⏱ длилось 17 мин
 ```
 
+### AI-ассистент
+
+Настройка в `.env`: подойдёт любой OpenAI-совместимый API.
+
+```env
+# OpenAI
+LLM_API_KEY=sk-...
+LLM_MODEL=gpt-4o-mini
+LLM_EMBEDDING_MODEL=text-embedding-3-small   # просим 1024 измерения
+
+# или локальная Ollama на хосте: бесплатно, данные не уходят наружу
+# ollama pull qwen2.5:3b && ollama pull bge-m3
+LLM_BASE_URL=http://host.docker.internal:11434/v1
+LLM_API_KEY=ollama
+LLM_MODEL=qwen2.5:3b
+LLM_EMBEDDING_MODEL=bge-m3
+```
+
+После `docker compose up -d` примеры runbook'ов загрузятся и проиндексируются сами
+(`make runbooks` — повторно). Свои `.md` загружаются на странице **AI → Runbook'и**.
+
+Как устроено:
+
+```mermaid
+flowchart LR
+    Q["Вопрос / ошибка из лога"] --> E["embedding<br/>bge-m3 / text-embedding-3"]
+    E --> S[("pgvector<br/>ORDER BY embedding #60;=#62; q<br/>HNSW, cosine")]
+    S --> K["top-k фрагментов<br/>ближе порога 0.6"]
+    SRV["метрики, алерты, логи<br/>выбранного сервера"] --> P
+    K --> P["промпт:<br/>источники [1..k] и [S]"]
+    P --> L["LLM"] --> A["ответ со ссылками,<br/>Markdown → очищенный HTML"]
+```
+
+Решения, о которых стоит рассказать:
+- **Абстракция провайдера.** Код зависит от интерфейса `LLMProvider` (`chat`, `embed`).
+  Одна реализация покрывает OpenAI, OpenRouter, vLLM и Ollama; в тестах её заменяет фейк.
+- **Кэш объяснений по отпечатку.** Из сообщения убираются числа, PID, IP, UUID и hex, от остатка
+  берётся SHA-256. 50 строк «Worker with pid N was terminated» — это один запрос к LLM.
+- **Вывод LLM — недоверенный.** Логи может подделать атакующий (prompt injection через URL
+  в nginx-логе). Поэтому в промпте логи помечены как данные, а не инструкции, Markdown чистится
+  allowlist'ом (nh3), а команды только показываются и никогда не выполняются.
+- **Порог релевантности подобран на реальных данных.** У bge-m3 подходящие фрагменты
+  находятся на cosine distance 0.25–0.53, посторонние вопросы — от 0.65, поэтому порог 0.6.
+- **Медленная LLM не блокирует интерфейс.** Запросы идут через Celery, страница опрашивает
+  статус через HTMX. На CPU без GPU локальная 3B-модель отвечает за 1–5 минут, OpenAI — за секунды.
+
 ### Разработка без Docker
 
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r backend/requirements-dev.txt
 make dev            # SQLite + runserver на http://127.0.0.1:8000
-make test           # ~190 тестов: API, модели, веб, алерты, бот, агент
+make test           # ~250 тестов: API, модели, веб, алерты, бот, AI (с фейковой LLM), агент
 ```
 
 Если задан `DATABASE_URL`, используется PostgreSQL. Без `REDIS_URL` кэш хранится в памяти,
@@ -247,6 +304,8 @@ backend/            Django-проект
   metrics/          метрики/сервисы/логи, ingest API, графики, демо, Celery-задачи
   alerts/           правила, алерты, движок проверки (engine.py), страницы алертов
   notifications/    Telegram: привязка чатов, бот (aiogram), отправка уведомлений
+  ai/               LLM-провайдер, чанкинг, pgvector-поиск, объяснения, RAG-чат, сводки;
+                    sample_runbooks/ — примеры runbook'ов
   templates/ static/
   tests/
 agent/              агент, install.sh, пример конфига, тесты агента
@@ -292,11 +351,22 @@ Content-Type: application/json
 - [x] **Этап 1 — сбор и визуализация:** агент, ingest API, дашборд, графики, логи, Docker, CI
 - [x] **Этап 2 — алерты:** правила (CPU > 90% 5 минут, сервис failed, сервер offline),
   Celery-проверки каждые 30 с, уведомления и команды `/status`, `/servers` в Telegram-боте
-- [ ] **Этап 3 — AI:** кластеризация и объяснение ошибок в логах через LLM, эмбеддинги в pgvector,
-  RAG-чат по runbook'ам команды («что делать, если postgres пишет "no space left on device"?»)
+- [x] **Этап 3 — AI:** «Объяснить» у ошибок с кэшем, RAG-чат по runbook'ам и данным сервера
+  с источниками, еженедельная AI-сводка в Telegram
+- [ ] **Дальше:** команда `/ask` в боте, кнопка «Объяснить» прямо в уведомлении об алерте,
+  поиск похожих инцидентов в истории, стриминг ответов LLM
 
 <details>
 <summary>Скриншоты</summary>
+
+**AI «Объяснить»** — разбор ошибки из лога с командами для починки
+<img src="docs/screenshots/ai-explain.png" alt="AI explain">
+
+**AI-чат** — ответ по runbook'у со ссылкой на источник
+<img src="docs/screenshots/ai-chat.png" alt="AI chat">
+
+**Runbook'и** — загрузка и индексация
+<img src="docs/screenshots/ai-runbooks.png" alt="Runbooks">
 
 **Алерты** — активные и история, обновляются сами
 <img src="docs/screenshots/alerts.png" alt="Alerts">
@@ -324,7 +394,7 @@ failed services and filterable logs.
 
 **Stage 1 (done):** data collection, API, web UI, Docker, CI.
 **Stage 2 (done):** alert rules, Celery checks every 30 s, Telegram bot on aiogram 3.
-**Next:** AI log analysis with a RAG chat over runbooks (stage 3), see the [Roadmap](#roadmap-1).
+**Stage 3 (done):** AI — "Explain" for log errors, RAG chat over runbooks and live server data, weekly AI health report in Telegram. Works with any OpenAI-compatible API, including a local Ollama.
 
 ### Features
 
@@ -342,6 +412,14 @@ failed services and filterable logs.
   one open alert per problem (partial unique index).
 - **Telegram bot (aiogram 3):** link a chat to an account with a one-time code, get alert and recovery
   notifications, use `/status` and `/servers`. Unlinked chats see nothing.
+- **AI "Explain":** ERROR/CRITICAL log lines get a button that explains the cause and suggests fix
+  commands. Results are cached by error fingerprint (numbers, PIDs, IPs stripped), so the same error
+  never costs a second LLM call.
+- **RAG chat:** Markdown runbooks are chunked by headings, embedded into pgvector (HNSW index) and
+  retrieved by cosine distance; answers also use the selected server's metrics, alerts and logs and
+  cite their sources (`[1]`, `[S]`).
+- **Weekly AI report:** every Monday Celery aggregates the week, the LLM writes findings and
+  recommendations, the report goes to Telegram (plain facts if the LLM is down).
 - **Demo mode:** `seed_demo` creates a fleet of 5 servers with a week of history, and Celery keeps them alive.
 
 ### Architecture
@@ -352,9 +430,9 @@ See the diagrams in the Russian section above. In short:
 |---|---|
 | `nginx` | Single entry point: serves static files, proxies to Django, limits body size and ingest floods |
 | `web` | Django + DRF behind Gunicorn: UI and API, applies migrations on start |
-| `db` | PostgreSQL 16 with pgvector (log embeddings in stage 3) |
+| `db` | PostgreSQL 16 with pgvector: runbook embeddings for RAG, HNSW index |
 | `redis` | Django cache, rate-limit counters shared by all Gunicorn workers, Celery broker |
-| `celery` | Background and periodic jobs: alert evaluation every 30 s, notifications, data retention, demo simulation |
+| `celery` | Background and periodic jobs: alerts every 30 s, notifications, LLM calls (explanations, chat, runbook indexing), weekly AI report, data retention |
 | `bot` | Telegram bot (aiogram 3, long polling): chat linking, `/status`, `/servers`; idles without a token |
 
 ### Quick start
@@ -387,13 +465,25 @@ Manage rules under **Правила** (three defaults are created on install). F
 with [@BotFather](https://t.me/BotFather), set `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` in `.env`,
 run `docker compose up -d`, then open **Telegram** in the UI → get a one-time code → send `/start <code>` to the bot.
 
+### AI assistant
+
+Set `LLM_API_KEY` (and `LLM_BASE_URL` for anything but OpenAI) in `.env`. For a free, fully local
+setup use Ollama on the host: `LLM_BASE_URL=http://host.docker.internal:11434/v1`, `LLM_API_KEY=ollama`,
+`LLM_MODEL=qwen2.5:3b`, `LLM_EMBEDDING_MODEL=bge-m3`. Embeddings must be 1024-dimensional.
+
+Design notes: a provider protocol (`chat`, `embed`) keeps the code vendor-neutral; LLM output is
+treated as untrusted (logs may carry prompt injection) — prompts mark logs as data, Markdown is
+sanitized with nh3 and suggested commands are never executed; the relevance cut-off (cosine
+distance 0.6) was measured on real bge-m3 embeddings; slow models never block requests thanks to
+Celery + HTMX polling.
+
 ### Development without Docker
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r backend/requirements-dev.txt
 make dev     # SQLite + runserver
-make test    # ~190 tests
+make test    # ~250 tests (LLM mocked)
 ```
 
 ### CI
@@ -408,8 +498,10 @@ opened an offline alert for the demo `backup-node`.
 - [x] **Stage 1 — collection & visualisation:** agent, ingest API, dashboard, charts, logs, Docker, CI
 - [x] **Stage 2 — alerting:** rules (CPU > 90% for 5 min, failed service, server offline),
   Celery evaluation every 30 s, Telegram notifications and `/status`, `/servers` commands
-- [ ] **Stage 3 — AI:** LLM-based error clustering and explanations, embeddings in pgvector,
-  RAG chat over the team's runbooks
+- [x] **Stage 3 — AI:** cached "Explain" for errors, RAG chat over runbooks and server data
+  with citations, weekly AI health report in Telegram
+- [ ] **Next:** `/ask` in the bot, "Explain" button inside alert notifications, similar-incident
+  search over history, streaming LLM answers
 
 ## License
 
