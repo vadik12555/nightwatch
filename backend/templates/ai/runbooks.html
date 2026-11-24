@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Runbook'и{% endblock %}
+
+{% block content %}
+{% include "ai/partials/tabs.html" %}
+
+<div class="form-layout form-layout--wide">
+  <section class="card">
+    <div class="card__head">
+      <div>
+        <h2>Runbook'и команды</h2>
+        <div class="card__sub">Разбиваются на фрагменты по заголовкам, превращаются в векторы и ищутся в pgvector</div>
+      </div>
+      <form method="post" action="{% url 'ai:load_samples' %}">
+        {% csrf_token %}<button type="submit" class="btn btn--ghost btn--sm">+ Примеры</button>
+      </form>
+    </div>
+    {% if runbooks %}
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Название</th><th>Фрагментов</th><th>Индексация</th><th></th></tr></thead>
+          <tbody>
+            {% for runbook in runbooks %}
+              <tr>
+                <td><a href="{% url 'ai:runbook' runbook.pk %}">{{ runbook.title }}</a>{% if runbook.source_name %}<div class="muted mono" style="font-size: 11.5px">{{ runbook.source_name }}</div>{% endif %}</td>
+                <td>{{ runbook.chunks.all|length }}</td>
+                <td>
+                  <span class="job job--{{ runbook.status }}" {% if runbook.error %}title="{{ runbook.error }}"{% endif %}>{{ runbook.get_status_display }}</span>
+                </td>
+                <td class="table__actions">
+                  <form method="post" action="{% url 'ai:runbook_reindex' runbook.pk %}">{% csrf_token %}<button class="btn btn--sm btn--ghost" type="submit">Переиндексировать</button></form>
+                  <form method="post" action="{% url 'ai:runbook_delete' runbook.pk %}" data-confirm="Удалить runbook «{{ runbook.title }}»?">{% csrf_token %}<button class="btn btn--sm btn--danger" type="submit">Удалить</button></form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="placeholder">Пока пусто. Загрузите свои .md-файлы или нажмите «+ Примеры».</div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2 style="margin-bottom: 14px">Загрузить</h2>
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert--error" style="margin-bottom: 12px">{{ form.non_field_errors|join:" " }}</div>{% endif %}
+      <div class="field">
+        <label for="{{ form.files.id_for_label }}">{{ form.files.label }}</label>
+        {{ form.files }}
+        {{ form.files.errors }}
+        <div class="help">.md / .markdown / .txt, UTF-8, до 500 КБ. Название берётся из первого заголовка «# …».</div>
+      </div>
+      <div class="field">
+        <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+        {{ form.title }}{{ form.title.errors }}
+      </div>
+      <div class="field">
+        <label for="{{ form.content.id_for_label }}">{{ form.content.label }}</label>
+        {{ form.content }}
+      </div>
+      <button type="submit" class="btn btn--primary">Загрузить и проиндексировать</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

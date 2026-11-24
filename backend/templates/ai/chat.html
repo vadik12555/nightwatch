@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}AI-чат{% endblock %}
+
+{% block content %}
+{% include "ai/partials/tabs.html" %}
+
+<div class="chat-layout">
+  <section class="card chat">
+    <div class="chat__log" id="chat-log">
+      {% for message in chat_messages %}
+        {% include "ai/partials/chat_message.html" %}
+      {% empty %}
+        <div class="chat__empty" id="chat-empty">
+          <div class="chat__empty-title">Спросите про инфраструктуру</div>
+          <p class="muted">Ассистент найдёт подходящие runbook'и, посмотрит метрики и логи выбранного сервера и ответит со ссылками на источники.</p>
+          <div class="suggestions">
+            <button type="button" class="chip" data-fill="Что делать, если PostgreSQL пишет No space left on device?">PostgreSQL: No space left on device</button>
+            <button type="button" class="chip" data-fill="Почему nginx отдаёт 502 и upstream timed out?">nginx: 502 / upstream timed out</button>
+            <button type="button" class="chip" data-fill="Что сейчас не так с этим сервером и что проверить первым делом?">Что не так с сервером?</button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <form class="chat__form" hx-post="{% url 'ai:chat_send' %}" hx-target="#chat-log" hx-swap="beforeend"
+          hx-on::before-request="document.getElementById('chat-empty')?.remove()"
+          hx-on::after-request="if (event.detail.successful) { this.querySelector('textarea').value = ''; }">
+      <select name="server" aria-label="Сервер для контекста">
+        <option value="">Без сервера — только runbook'и</option>
+        {% for s in servers %}
+          <option value="{{ s.pk }}"{% if s.pk == selected_server %} selected{% endif %}>Контекст: {{ s.name }}</option>
+        {% endfor %}
+      </select>
+      <textarea name="question" rows="2" maxlength="2000" required data-submit-on-enter
+                placeholder="Например: почему на staging-app упал celery-worker?"{% if not ai_enabled %} disabled{% endif %}></textarea>
+      <button type="submit" class="btn btn--primary"{% if not ai_enabled %} disabled{% endif %}>Спросить</button>
+    </form>
+  </section>
+
+  <aside class="card chat-side">
+    <h2>Как это работает</h2>
+    <ol class="howto">
+      <li>🔎 <span>Вопрос превращается в вектор и ищется среди <b>{{ runbooks_ready }}</b> проиндексированных <a href="{% url 'ai:runbooks' %}">runbook'ов</a> (pgvector).</span></li>
+      <li>🖥 <span>Если выбран сервер — добавляются его метрики, алерты и свежие ошибки из логов <b>[S]</b>.</span></li>
+      <li>🧠 <span>LLM отвечает только по этим источникам и ставит ссылки <b>[1]</b>, <b>[2]</b>.</span></li>
+    </ol>
+    {% if chat_messages %}
+      <form method="post" action="{% url 'ai:chat_clear' %}" data-confirm="Очистить историю чата?" style="margin-top: 16px">
+        {% csrf_token %}<button class="btn btn--ghost btn--sm" type="submit">Очистить историю</button>
+      </form>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

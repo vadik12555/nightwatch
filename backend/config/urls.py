@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/v1/", include("metrics.api_urls")),
     path("alerts/", include("alerts.urls")),
     path("telegram/", include("notifications.urls")),
+    path("ai/", include("ai.urls")),
     path("healthz/", views.healthz, name="healthz"),
     path("", include("servers.urls")),
 ]

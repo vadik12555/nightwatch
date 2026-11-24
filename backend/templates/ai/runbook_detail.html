@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load ai_tags %}
+{% block title %}{{ runbook.title }}{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs"><a href="{% url 'ai:runbooks' %}">Runbook'и</a> / <span>{{ runbook.title }}</span></nav>
+<div class="page-head">
+  <div>
+    <h1>{{ runbook.title }}</h1>
+    <p class="muted">
+      <span class="job job--{{ runbook.status }}">{{ runbook.get_status_display }}</span>
+      {% if runbook.indexed_at %} · проиндексирован {{ runbook.indexed_at|date:"d.m.Y H:i" }}{% endif %}
+      · фрагментов: {{ chunks|length }}
+    </p>
+    {% if runbook.error %}<div class="alert alert--error" style="margin-top: 10px">{{ runbook.error }}</div>{% endif %}
+  </div>
+</div>
+
+<div class="grid-2 grid-2--reverse">
+  <section class="card md">{{ runbook.content|markdown }}</section>
+  <section class="card">
+    <h2 style="margin-bottom: 12px">Фрагменты для поиска</h2>
+    {% for chunk in chunks %}
+      <details class="chunk">
+        <summary><span class="mono">#{{ chunk.position }}</span> {{ chunk.heading|default:"(без заголовка)" }} <span class="muted">· {{ chunk.text|length }} симв.</span></summary>
+        <pre class="chunk__text">{{ chunk.text }}</pre>
+      </details>
+    {% empty %}
+      <div class="placeholder">Фрагментов нет — runbook ещё не проиндексирован.</div>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

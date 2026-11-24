@@ -6,6 +6,7 @@
   <title>{% block title %}NightWatch{% endblock %} · NightWatch</title>
   <link rel="icon" href="{% static 'img/logo.svg' %}" type="image/svg+xml">
   <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/ai.css' %}">
   <script src="{% static 'vendor/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/app.js' %}" defer></script>
   {% block head %}{% endblock %}
@@ -26,6 +27,7 @@
               Алерты{% if nav_open_alerts %} <span class="nav__badge">{{ nav_open_alerts }}</span>{% endif %}
             </a>
             <a href="{% url 'alerts:rules' %}" class="nav__link{% if current == 'rules' or current == 'rule_create' or current == 'rule_edit' %} is-active{% endif %}">Правила</a>
+            <a href="{% url 'ai:chat' %}" class="nav__link{% if ns == 'ai' %} is-active{% endif %}">✨ AI</a>
             <a href="{% url 'notifications:telegram' %}" class="nav__link{% if ns == 'notifications' %} is-active{% endif %}">Telegram</a>
             {% if user.is_staff %}<a href="{% url 'admin:index' %}" class="nav__link">Админка</a>{% endif %}
           {% endwith %}

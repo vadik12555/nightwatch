@@ -1,0 +1,12 @@
+<div class="page-head">
+  <div>
+    <h1>✨ AI-ассистент</h1>
+    <p class="muted">Ответы с опорой на runbook'и команды и живые данные серверов{% if not ai_enabled %} · <b style="color: var(--warn)">AI не настроен</b>{% endif %}</p>
+  </div>
+  <nav class="segmented" aria-label="Разделы AI">
+    <a class="segmented__btn{% if tab == 'chat' %} is-active{% endif %}" href="{% url 'ai:chat' %}">Чат</a>
+    <a class="segmented__btn{% if tab == 'runbooks' %} is-active{% endif %}" href="{% url 'ai:runbooks' %}">Runbook'и</a>
+    <a class="segmented__btn{% if tab == 'reports' %} is-active{% endif %}" href="{% url 'ai:reports' %}">Сводки</a>
+  </nav>
+</div>
+{% if not ai_enabled %}{% include "ai/partials/not_configured.html" %}{% endif %}

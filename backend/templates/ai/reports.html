@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}AI-сводки{% endblock %}
+
+{% block content %}
+{% include "ai/partials/tabs.html" %}
+
+<section class="card">
+  <div class="card__head">
+    <div>
+      <h2>Еженедельные сводки о здоровье инфраструктуры</h2>
+      <div class="card__sub">Каждый понедельник в 9:00 Celery собирает цифры за неделю, LLM пишет выводы, сводка уходит в Telegram</div>
+    </div>
+    <form method="post" action="{% url 'ai:reports_run' %}">
+      {% csrf_token %}<button type="submit" class="btn btn--primary btn--sm">Сформировать сейчас</button>
+    </form>
+  </div>
+
+  {% for report in reports %}
+    <article class="report">
+      <div class="report__head">
+        <b>{{ report.period_start|date:"d.m" }} – {{ report.period_end|date:"d.m.Y" }}</b>
+        {% if report.ai_generated %}<span class="tag">AI</span>{% else %}<span class="tag">только цифры</span>{% endif %}
+        <span class="muted">· отправлено в {{ report.sent_to }} чат(ов) · {{ report.created_at|date:"d.m H:i" }}</span>
+      </div>
+      <div class="report__body">{{ report.summary|linebreaksbr }}</div>
+    </article>
+  {% empty %}
+    <div class="placeholder">Сводок ещё не было. Нажмите «Сформировать сейчас», чтобы посмотреть, как она выглядит.</div>
+  {% endfor %}
+</section>
+{% endblock %}
