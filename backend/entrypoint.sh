@@ -11,6 +11,8 @@ if [ "${DJANGO_MIGRATE:-0}" = "1" ]; then
 
     if [ "${DJANGO_SEED_DEMO:-0}" = "1" ]; then
         python manage.py seed_demo --if-empty
+        # Example runbooks for the AI chat (indexed by Celery once an LLM is configured).
+        python manage.py load_runbooks
     fi
 fi
 

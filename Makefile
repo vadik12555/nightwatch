@@ -4,7 +4,7 @@ COMPOSE := docker compose
 MANAGE := $(COMPOSE) exec web python manage.py
 PYTHON ?= python
 
-.PHONY: help env up down restart logs ps migrate seed seed-reset superuser shell \
+.PHONY: help env up down restart logs ps migrate seed seed-reset runbooks weekly-report superuser shell \
         test lint fmt check dev agent-dry-run clean
 
 help: ## Show this help
@@ -38,6 +38,12 @@ seed: ## Create demo servers with a week of data
 
 seed-reset: ## Recreate demo servers
 	$(MANAGE) seed_demo --reset
+
+runbooks: ## Load the example runbooks and index them for the AI chat
+	$(MANAGE) load_runbooks
+
+weekly-report: ## Build the weekly AI health report now and send it to Telegram
+	$(COMPOSE) exec celery celery -A config call ai.tasks.weekly_health_report
 
 superuser: ## Create an admin user interactively
 	$(MANAGE) createsuperuser

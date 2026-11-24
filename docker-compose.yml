@@ -4,6 +4,7 @@
 #                                     └──▶ redis (cache, rate-limit counters, Celery broker)
 #   celery (worker + beat: alerts every 30 s) ──▶ redis, db, Telegram API
 #   bot (aiogram, long polling) ──▶ db, Telegram API
+#   web + celery ──▶ LLM: any OpenAI-compatible API (OpenAI, or Ollama on the host)
 name: nightwatch
 
 x-backend-env: &backend-env
@@ -17,6 +18,9 @@ x-backend: &backend
   image: nightwatch-backend:latest
   env_file: .env
   environment: *backend-env
+  # Lets containers reach a local Ollama on the host: LLM_BASE_URL=http://host.docker.internal:11434/v1
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   restart: unless-stopped
   depends_on:
     db:
