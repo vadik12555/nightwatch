@@ -94,7 +94,14 @@ def chat_messages(
     return [
         {"role": "system", "content": CHAT_SYSTEM},
         *history,
-        {"role": "user", "content": f"Источники:\n{context}\n\nВопрос: {question}"},
+        {
+            "role": "user",
+            "content": (
+                f"Источники:\n{context}\n\nВопрос: {question}\n\n"
+                # Repeated here on purpose: small models follow the last message best.
+                "Отвечай по источникам и после каждого факта ставь ссылку: [1], [2] или [S]."
+            ),
+        },
     ]
 
 
