@@ -246,9 +246,9 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 # Must return 1024-dim vectors (bge-m3, or text-embedding-3-* with dimensions=1024).
 LLM_EMBEDDING_MODEL = os.environ.get("LLM_EMBEDDING_MODEL", "text-embedding-3-small")
-LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 180)
+LLM_TIMEOUT_SECONDS = env_int("LLM_TIMEOUT_SECONDS", 300)
 # Runbook chunks farther than this cosine distance from the question are ignored.
-RAG_MAX_DISTANCE = float(os.environ.get("RAG_MAX_DISTANCE", "0.75"))
+RAG_MAX_DISTANCE = float(os.environ.get("RAG_MAX_DISTANCE", "0.6"))
 RAG_TOP_K = env_int("RAG_TOP_K", 4)
 
 # --- Logging ------------------------------------------------------------------------

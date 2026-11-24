@@ -12,6 +12,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from ai import services, tasks
 from ai.models import JobStatus, Runbook
+from ai.providers import is_configured
 
 SAMPLES_DIR = Path(__file__).resolve().parents[2] / "sample_runbooks"
 
@@ -27,6 +28,7 @@ class Command(BaseCommand):
         if not path.is_dir():
             raise CommandError(f"Not a directory: {path}")
 
+        ai_ready = is_configured()
         created = updated = 0
         for file in sorted(path.glob("*.md")):
             content = file.read_text(encoding="utf-8")
@@ -37,13 +39,19 @@ class Command(BaseCommand):
                     title=title, content=content, source_name=file.name
                 )
                 created += 1
-            elif runbook.content != content or runbook.status == JobStatus.FAILED:
+            elif runbook.content != content:
                 runbook.title, runbook.content, runbook.status = title, content, JobStatus.PENDING
                 runbook.save()
                 updated += 1
-            else:
-                continue
-            tasks.index_runbook.delay(runbook.pk)
-            self.stdout.write(f"  queued: {file.name}")
+            elif runbook.status not in (JobStatus.PENDING, JobStatus.FAILED):
+                continue  # unchanged and already indexed
+            if ai_ready:
+                tasks.index_runbook.delay(runbook.pk)
+                self.stdout.write(f"  queued: {file.name}")
 
         self.stdout.write(self.style.SUCCESS(f"Runbooks: {created} created, {updated} updated."))
+        if not ai_ready:
+            self.stdout.write(
+                "AI is not configured — runbooks are stored but not indexed yet. "
+                "Set LLM_API_KEY and run this command again."
+            )

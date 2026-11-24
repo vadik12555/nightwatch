@@ -137,6 +137,18 @@ class TestIndexing:
         call_command("load_runbooks", stdout=out)
         assert "0 created, 0 updated" in out.getvalue()
 
+    def test_load_runbooks_without_ai_stores_them_for_later(self, settings, fake_llm):
+        settings.LLM_API_KEY = ""
+        out = StringIO()
+        call_command("load_runbooks", stdout=out)
+        assert "not indexed yet" in out.getvalue()
+        assert Runbook.objects.filter(status=JobStatus.PENDING).count() == 6
+        assert fake_llm.embed_calls == []
+
+        settings.LLM_API_KEY = "key"  # AI configured later: the same command indexes them
+        call_command("load_runbooks", stdout=StringIO())
+        assert Runbook.objects.filter(status=JobStatus.READY).count() == 6
+
 
 # --- «Объяснить» -------------------------------------------------------------------------
 
