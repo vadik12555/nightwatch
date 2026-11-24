@@ -5,4 +5,5 @@ dj-database-url~=3.1.2
 python-dotenv~=1.2.4
 celery[redis]~=5.7.0  # the extra pulls kombu redis transport deps (packaging)
 redis~=8.2.0
+aiogram~=3.34.0
 gunicorn~=27.0.1
