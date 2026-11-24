@@ -44,6 +44,8 @@ def servers_with_latest_metrics() -> list[Server]:
             latest_snapshot_id=Subquery(latest_id),
             failed_services=Count("services", filter=Q(services__status="failed")),
         )
+        # Explicit: Meta.ordering is ignored in GROUP BY (aggregate) queries.
+        .order_by("name")
     )
     snapshots = MetricSnapshot.objects.in_bulk(
         [s.latest_snapshot_id for s in servers if s.latest_snapshot_id]

@@ -100,6 +100,15 @@ class TestDashboard:
         with django_assert_max_num_queries(6):
             auth_client.get(reverse("servers:dashboard"), **HTMX)
 
+    def test_cards_sorted_by_name(self, auth_client):
+        for name in ["zeta", "alpha", "mike"]:
+            s, _ = Server.create_with_token(name=name)
+            ServiceStatus.objects.create(
+                server=s, name="nginx", status="failed", updated_at=timezone.now()
+            )
+        response = auth_client.get(reverse("servers:dashboard"))
+        assert [s.name for s in response.context["servers"]] == ["alpha", "mike", "zeta"]
+
     def test_htmx_request_returns_partial(self, auth_client, server):
         response = auth_client.get(reverse("servers:dashboard"), **HTMX)
         html = response.content.decode()
